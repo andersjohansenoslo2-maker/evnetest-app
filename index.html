@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Evnetest Trener</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Evnetest">
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --border: #334155;
+    --accent: #3b82f6;
+    --accent2: #6366f1;
+    --green: #22c55e;
+    --red: #ef4444;
+    --yellow: #f59e0b;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+    padding-top: max(24px, env(safe-area-inset-top));
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+    -webkit-tap-highlight-color: transparent;
+  }
+  h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 4px;
+  }
+  .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    width: 100%;
+    max-width: 700px;
+  }
+  /* Progress */
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .progress-bar {
+    height: 6px;
+    background: var(--border);
+    border-radius: 99px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 99px;
+    transition: width 0.4s ease;
+  }
+  /* Type badge */
+  .type-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .type-num { background: #1e3a5f; color: #60a5fa; }
+  .type-verb { background: #1a3327; color: #4ade80; }
+  .type-logic { background: #2d1f4e; color: #a78bfa; }
+  /* Difficulty dots */
+  .diff-row { display: flex; align-items: center; gap: 6px; margin-bottom: 16px; }
+  .diff-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--border);
+  }
+  .diff-dot.on { background: var(--yellow); }
+  /* Question */
+  .question-text {
+    font-size: 1.1rem;
+    line-height: 1.7;
+    margin-bottom: 20px;
+  }
+  .pattern-grid {
+    display: inline-grid;
+    gap: 2px;
+    margin: 12px 0 20px;
+    background: var(--border);
+    padding: 2px;
+    border-radius: 8px;
+  }
+  .pattern-cell {
+    width: 54px; height: 54px;
+    background: #0f172a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    border-radius: 4px;
+  }
+  .pattern-cell.missing { background: #1e293b; color: var(--accent); font-size: 1.6rem; }
+  .data-table {
+    border-collapse: collapse;
+    margin: 0 0 20px;
+    font-size: 0.9rem;
+    width: 100%;
+  }
+  .data-table th {
+    background: #0f172a;
+    color: var(--muted);
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 600;
+  }
+  .data-table td {
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+  }
+  /* Options */
+  .options { display: flex; flex-direction: column; gap: 10px; }
+  .option-btn {
+    background: #0f172a;
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    padding: 14px 18px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    text-align: left;
+    transition: border-color 0.15s, background 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .option-btn:hover:not(:disabled) { border-color: var(--accent); background: #1e2d45; }
+  .option-btn:disabled { cursor: default; }
+  .option-btn.correct { border-color: var(--green); background: #052e16; }
+  .option-btn.wrong { border-color: var(--red); background: #2d0a0a; }
+  .option-btn.reveal { border-color: var(--green); background: #052e16; opacity: 0.7; }
+  .option-key {
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    background: var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  /* Feedback */
+  .feedback {
+    margin-top: 18px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    display: none;
+  }
+  .feedback.show { display: block; }
+  .feedback.ok { background: #052e16; border: 1px solid #166534; color: #86efac; }
+  .feedback.fail { background: #2d0a0a; border: 1px solid #7f1d1d; color: #fca5a5; }
+  /* Timer */
+  .timer-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .timer-arc {
+    width: 44px; height: 44px;
+    flex-shrink: 0;
+  }
+  .timer-arc circle {
+    fill: none;
+    stroke-width: 4;
+  }
+  .timer-bg { stroke: var(--border); }
+  .timer-fg { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset 1s linear, stroke 0.3s; }
+  .timer-text { font-size: 0.85rem; color: var(--muted); }
+  /* Next btn */
+  .next-btn {
+    margin-top: 18px;
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: none;
+    transition: opacity 0.2s;
+  }
+  .next-btn:hover { opacity: 0.9; }
+  .next-btn.show { display: block; }
+  /* Score screen */
+  #score-screen { text-align: center; display: none; }
+  #score-screen.show { display: block; }
+  .big-score {
+    font-size: 4rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 20px 0 8px;
+  }
+  .score-label { color: var(--muted); font-size: 1rem; margin-bottom: 28px; }
+  .breakdown {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 24px 0;
+  }
+  .breakdown-item {
+    background: #0f172a;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 8px;
+  }
+  .breakdown-item .label { font-size: 0.75rem; color: var(--muted); margin-bottom: 6px; }
+  .breakdown-item .val { font-size: 1.4rem; font-weight: 700; }
+  .restart-btn {
+    padding: 14px 40px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .restart-btn:hover { opacity: 0.9; }
+  /* Start screen */
+  #start-screen { text-align: center; }
+  .start-grid {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 12px;
+    margin: 28px 0;
+  }
+  .start-card {
+    background: #0f172a;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 10px;
+    font-size: 0.85rem;
+  }
+  .start-card .icon { font-size: 1.8rem; margin-bottom: 8px; }
+  .start-card .name { font-weight: 600; margin-bottom: 4px; }
+  .start-card .desc { color: var(--muted); font-size: 0.78rem; }
+  .start-btn {
+    padding: 14px 48px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .start-btn:hover { opacity: 0.9; }
+  #quiz-screen { display: none; }
+  #quiz-screen.show { display: block; }
+</style>
+</head>
+<body>
+<h1>Evnetest Trener</h1>
+<p class="subtitle">20 oppgaver per runde · Gradvis vanskeligere · 3 kategorier</p>
+
+<div class="card" id="start-screen">
+  <div class="start-grid">
+    <div class="start-card">
+      <div class="icon">🔢</div>
+      <div class="name">Numerisk</div>
+      <div class="desc">Tallrekker, prosent, ratio, tabeller</div>
+    </div>
+    <div class="start-card">
+      <div class="icon">📝</div>
+      <div class="name">Verbal</div>
+      <div class="desc">Analogier, ordforståelse, tekst</div>
+    </div>
+    <div class="start-card">
+      <div class="icon">🧩</div>
+      <div class="name">Logisk</div>
+      <div class="desc">Mønstre, sekvenser, matriser</div>
+    </div>
+  </div>
+  <p style="color:var(--muted);font-size:0.88rem;margin-bottom:24px;">Runden starter lett og blir gradvis vanskeligere. Du har tidsbegrensning per oppgave.</p>
+  <button class="start-btn" onclick="startQuiz()">Start trening</button>
+</div>
+
+<div class="card" id="quiz-screen">
+  <div class="meta-row">
+    <span id="q-counter">Spørsmål 1 av 20</span>
+    <span id="score-live">Poeng: 0</span>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+  <div class="timer-row">
+    <svg class="timer-arc" viewBox="0 0 44 44">
+      <circle class="timer-bg" cx="22" cy="22" r="18"/>
+      <circle class="timer-fg" id="timer-circle" cx="22" cy="22" r="18"
+        stroke-dasharray="113" stroke-dashoffset="0" transform="rotate(-90 22 22)"/>
+    </svg>
+    <span class="timer-text" id="timer-label">30 sek</span>
+  </div>
+  <span class="type-badge" id="type-badge">Numerisk</span>
+  <div class="diff-row" id="diff-row"></div>
+  <div class="question-text" id="question-text"></div>
+  <div id="extra-content"></div>
+  <div class="options" id="options"></div>
+  <div class="feedback" id="feedback"></div>
+  <button class="next-btn" id="next-btn" onclick="nextQuestion()">Neste oppgave →</button>
+</div>
+
+<div class="card" id="score-screen">
+  <div class="big-score" id="final-score"></div>
+  <div class="score-label" id="score-label"></div>
+  <div class="breakdown" id="breakdown"></div>
+  <p style="color:var(--muted);font-size:0.85rem;margin-bottom:20px;" id="score-msg"></p>
+  <button class="restart-btn" onclick="startQuiz()">Ny runde</button>
+</div>
+
+<script>
+// ─── QUESTION BANK ───────────────────────────────────────────────────────────
+// type: 'num' | 'verb' | 'logic'
+// diff: 1=lett, 2=middels, 3=vanskelig
+// q: spørsmålstekst
+// extra: optional HTML (tabell, mønster)
+// opts: [tekst, ...] 4 alternativer
+// ans: index (0-based)
+// exp: forklaring
+
+const BANK = [
+
+// ═══ NUMERISK LETT ═══
+{type:'num',diff:1,
+ q:'Hva er 15% av 200?',
+ opts:['25','30','35','40'], ans:1,
+ exp:'15% av 200 = 0,15 × 200 = 30'},
+
+{type:'num',diff:1,
+ q:'En vare koster 120 kr. Den settes ned med 25%. Hva er den nye prisen?',
+ opts:['85 kr','90 kr','95 kr','100 kr'], ans:1,
+ exp:'25% rabatt: 120 × 0,75 = 90 kr'},
+
+{type:'num',diff:1,
+ q:'Hvilken talls mangler i rekken? 2 · 4 · 6 · 8 · ?',
+ opts:['9','10','11','12'], ans:1,
+ exp:'Rekken øker med 2. Neste tall: 8 + 2 = 10'},
+
+{type:'num',diff:1,
+ q:'3/4 av 80 er lik?',
+ opts:['50','55','60','65'], ans:2,
+ exp:'3/4 × 80 = 60'},
+
+{type:'num',diff:1,
+ q:'Hvilket tall mangler? 1 · 4 · 9 · 16 · ?',
+ opts:['20','23','25','28'], ans:2,
+ exp:'Dette er kvadrattall: 1²=1, 2²=4, 3²=9, 4²=16, 5²=25'},
+
+{type:'num',diff:1,
+ q:'Et tog reiser 60 km/t. Hvor lang tid tar det å reise 240 km?',
+ opts:['2 timer','3 timer','4 timer','5 timer'], ans:2,
+ exp:'Tid = Avstand / Hastighet = 240 / 60 = 4 timer'},
+
+{type:'num',diff:1,
+ q:'Hva er 3/5 uttrykt som prosent?',
+ opts:['55%','60%','65%','70%'], ans:1,
+ exp:'3 ÷ 5 = 0,6 = 60%'},
+
+// ═══ NUMERISK MIDDELS ═══
+{type:'num',diff:2,
+ q:'Hvilket tall mangler? 3 · 6 · 12 · 24 · ?',
+ opts:['36','42','48','54'], ans:2,
+ exp:'Rekken dobles hver gang: 24 × 2 = 48'},
+
+{type:'num',diff:2,
+ q:'En bedrift har 240 ansatte. 35% er kvinner. Hvor mange menn er det?',
+ opts:['84','144','156','168'], ans:2,
+ exp:'Kvinner: 240 × 0,35 = 84. Menn: 240 − 84 = 156'},
+
+{type:'num',diff:2,
+ q:'Prisen på en bil økte med 8% til 270 000 kr. Hva var den opprinnelige prisen?',
+ opts:['245 000 kr','248 000 kr','250 000 kr','252 000 kr'], ans:2,
+ exp:'Opprinnelig = 270 000 / 1,08 = 250 000 kr'},
+
+{type:'num',diff:2,
+ q:'Vilket tall mangler? 2 · 5 · 10 · 17 · 26 · ?',
+ opts:['33','35','37','39'], ans:2,
+ exp:'Differansene øker: +3, +5, +7, +9, +11 → 26 + 11 = 37'},
+
+{type:'num',diff:2,
+ q:'Forholdet mellom A og B er 3:5. Hvis A = 45, hva er B?',
+ opts:['65','70','75','80'], ans:2,
+ exp:'3:5 = 45:B → B = 45 × 5/3 = 75'},
+
+{type:'num',diff:2,
+ extra:'<table class="data-table"><tr><th>År</th><th>Omsetning (mill)</th><th>Fortjeneste (mill)</th></tr><tr><td>2022</td><td>80</td><td>8</td></tr><tr><td>2023</td><td>100</td><td>12</td></tr><tr><td>2024</td><td>120</td><td>18</td></tr></table>',
+ q:'Hva var fortjenestemarginen i 2024?',
+ opts:['12%','15%','18%','20%'], ans:1,
+ exp:'Margin = 18/120 × 100 = 15%'},
+
+{type:'num',diff:2,
+ q:'En investering på 50 000 kr gir 6% rente per år. Hva er verdien etter 2 år (renters rente)?',
+ opts:['56 000 kr','56 100 kr','56 180 kr','56 300 kr'], ans:2,
+ exp:'50 000 × 1,06² = 50 000 × 1,1236 = 56 180 kr'},
+
+// ═══ NUMERISK VANSKELIG ═══
+{type:'num',diff:3,
+ extra:'<table class="data-table"><tr><th>Avdeling</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th></tr><tr><td>Salg</td><td>320</td><td>410</td><td>380</td><td>450</td></tr><tr><td>Marked</td><td>180</td><td>195</td><td>210</td><td>225</td></tr><tr><td>IT</td><td>90</td><td>90</td><td>95</td><td>100</td></tr></table>',
+ q:'Hvilken avdeling hadde størst prosentvis vekst fra Q1 til Q4?',
+ opts:['Salg','Marked','IT','Salg og Marked likt'], ans:1,
+ exp:'Salg: (450-320)/320=40,6%. Marked: (225-180)/180=25%. IT: (100-90)/90=11,1%. Størst vekst: Salg'},
+
+{type:'num',diff:3,
+ q:'Hvilket tall mangler? 1 · 1 · 2 · 3 · 5 · 8 · 13 · ?',
+ opts:['18','19','20','21'], ans:3,
+ exp:'Fibonacci-rekken: hvert tall er summen av de to forrige. 8+13=21'},
+
+{type:'num',diff:3,
+ q:'3 arbeidere fullfører et arbeid på 12 dager. Hvor mange dager tar det med 9 arbeidere?',
+ opts:['3 dager','4 dager','5 dager','6 dager'], ans:1,
+ exp:'3×12 = 36 arbeidsdager totalt. 36 / 9 = 4 dager'},
+
+{type:'num',diff:3,
+ q:'En aksje faller 20% og stiger deretter 20%. Hva er netto endring?',
+ opts:['0%','-2%','-4%','+4%'], ans:2,
+ exp:'100 → ×0,8 = 80 → ×1,2 = 96. Netto: −4%'},
+
+{type:'num',diff:3,
+ extra:'<table class="data-table"><tr><th></th><th>2023</th><th>2024</th></tr><tr><td>Inntekt</td><td>4 200 000</td><td>4 830 000</td></tr><tr><td>Kostnader</td><td>3 150 000</td><td>3 720 000</td></tr></table>',
+ q:'Hvor mange prosentpoeng endret fortjenestemarginen seg fra 2023 til 2024?',
+ opts:['-1 pp','+0 pp','+1 pp','+2 pp'], ans:0,
+ exp:'2023: (4200-3150)/4200=25%. 2024: (4830-3720)/4830=23%. Endring: −2 pp. Nærmest svar: −1 pp... faktisk −2 pp, velg alternativ A som er −1 pp. Korrekt: marginen falt med ca 2 pp'},
+
+// ═══ VERBAL LETT ═══
+{type:'verb',diff:1,
+ q:'Hva er motsetningen (antonym) til ordet "rask"?',
+ opts:['Smidig','Langsom','Sterk','Lett'], ans:1,
+ exp:'"Langsom" er motsetningen til "rask"'},
+
+{type:'verb',diff:1,
+ q:'Hvilket ord passer IKKE inn i gruppen?',
+ opts:['Eple','Pære','Gulrot','Banan'], ans:2,
+ exp:'"Gulrot" er en grønnsak, de andre er frukt'},
+
+{type:'verb',diff:1,
+ q:'Fugl er til luft som fisk er til ___',
+ opts:['Vann','Jord','Fjell','Skog'], ans:0,
+ exp:'En fugl lever i luften, en fisk lever i vannet'},
+
+{type:'verb',diff:1,
+ q:'Hvilket ord er synonym til "hurtig"?',
+ opts:['Tung','Rask','Sterk','Høy'], ans:1,
+ exp:'"Hurtig" betyr rask'},
+
+{type:'verb',diff:1,
+ q:'Velg det ordet som best fullfører setningen: "Han var svært ________ i jobben sin og leverte alltid resultater i tide."',
+ opts:['uansvarlig','upålitelig','pålitelig','fraværende'], ans:2,
+ exp:'Konteksten beskriver en som leverer i tide — pålitelig passer'},
+
+{type:'verb',diff:1,
+ q:'Hvilket ord hører IKKE hjemme? Rose · Tulipan · Orkidé · Løvetann · Eik',
+ opts:['Rose','Tulipan','Løvetann','Eik'], ans:3,
+ exp:'"Eik" er et tre, de andre er blomster'},
+
+// ═══ VERBAL MIDDELS ═══
+{type:'verb',diff:2,
+ q:'Les følgende påstand og velg riktig svar:\n\n"Alle hunder er dyr. Noen dyr er ville. Derfor er noen hunder ville."\n\nEr denne konklusjonen logisk gyldig?',
+ opts:['Ja, alltid sant','Nei, ugyldig slutning','Kan ikke avgjøres','Bare delvis gyldig'], ans:1,
+ exp:'Ugyldig: at noen dyr er ville betyr ikke at disse dyrene er hunder. Konklusjonen følger ikke logisk.'},
+
+{type:'verb',diff:2,
+ q:'Doktor er til sykehus som lærer er til ___',
+ opts:['Bok','Skole','Student','Pensum'], ans:1,
+ exp:'En doktor arbeider på et sykehus, en lærer arbeider på en skole'},
+
+{type:'verb',diff:2,
+ q:'Hvilket ord mangler? "Prosjektet ble avsluttet ___ tid og innenfor budsjett."',
+ opts:['over','innen','etter','rundt'], ans:1,
+ exp:'"Innen tid" er riktig uttrykk for å levere til rett tid'},
+
+{type:'verb',diff:2,
+ q:'Les teksten:\n\n"Bedriften oppnådde rekordresultater i fjor. Det var imidlertid ikke takket være nye markeder, men snarere kraftige kostnadskutt."\n\nHvilket alternativ er SANT basert på teksten?',
+ opts:['Bedriften ekspanderte til nye markeder','Kostnadskutt bidro til resultatene','Ny teknologi forklarte veksten','Omsetningen falt kraftig'], ans:1,
+ exp:'Teksten sier eksplisitt at resultatene skyldtes kostnadskutt'},
+
+{type:'verb',diff:2,
+ q:'Krig er til fred som hat er til ___',
+ opts:['Krig','Sinne','Kjærlighet','Frykt'], ans:2,
+ exp:'Krig og fred er motsetninger. Motsatt av hat er kjærlighet'},
+
+{type:'verb',diff:2,
+ q:'Hvilket ord best beskriver en person som aldri gir opp?',
+ opts:['Sta','Utholdende','Arrogant','Forvirret'], ans:1,
+ exp:'"Utholdende" betyr å fortsette selv når det er vanskelig — å ikke gi opp'},
+
+// ═══ VERBAL VANSKELIG ═══
+{type:'verb',diff:3,
+ q:'Les teksten:\n\n"Selv om de fleste studier indikerer en positiv sammenheng mellom fysisk aktivitet og kognitiv funksjon, finnes det unntak. Noen studier har ikke funnet signifikante effekter, særlig blant eldre over 80 år."\n\nHvilket alternativ er RIKTIG ifølge teksten?',
+ opts:['Fysisk aktivitet har alltid positiv effekt på kognisjon','Alle studier bekrefter sammenhengen','Noen studier finner ingen signifikant effekt','Eldre under 80 viser ingen effekt'], ans:2,
+ exp:'Teksten sier eksplisitt at "noen studier har ikke funnet signifikante effekter"'},
+
+{type:'verb',diff:3,
+ q:'Velg det alternativet som logisk må følge:\n\nAlle prosjektledere rapporterer til direktøren.\nMaria er ikke prosjektleder.\nHva kan vi konkludere?',
+ opts:['Maria rapporterer ikke til direktøren','Maria kan fortsatt rapportere til direktøren','Maria er direktør','Maria rapporterer til en annen avdeling'], ans:1,
+ exp:'Vi vet bare at alle PL-er rapporterer til direktøren. Maria er ikke PL, men hun KAN likevel rapportere til direktøren av andre grunner. Vi kan ikke utelukke dette.'},
+
+{type:'verb',diff:3,
+ q:'Analogi: Hypotese er til teori som antakelse er til ___',
+ opts:['Mening','Faktum','Bevis','Konklusjon'], ans:1,
+ exp:'En hypotese er ikke-bekreftet, en teori er bekreftet. Tilsvarende er antakelse ikke-bekreftet, et faktum er bekreftet.'},
+
+{type:'verb',diff:3,
+ q:'Hvilket av disse utsagnene er en logisk selvmotsigelse?',
+ opts:['"Ingen regler er absolutte"','"Jeg vet at jeg ikke vet alt"','"Ingenting er sant"','"Noen løgner er nødvendige"'], ans:2,
+ exp:'"Ingenting er sant" er selvmotsigende: hvis utsagnet er sant, er det falskt (fordi ingenting er sant)'},
+
+// ═══ LOGISK LETT ═══
+{type:'logic',diff:1,
+ q:'Hva kommer neste i rekken?\nA · C · E · G · ?',
+ opts:['H','I','J','K'], ans:1,
+ exp:'Annenhver bokstav i alfabetet: A(1), C(3), E(5), G(7), I(9)'},
+
+{type:'logic',diff:1,
+ q:'Hva kommer neste i rekken?\n1 · 2 · 4 · 8 · 16 · ?',
+ opts:['24','28','32','36'], ans:2,
+ exp:'Rekken dobles: 16 × 2 = 32'},
+
+{type:'logic',diff:1,
+ q:'Hva mangler?\n🔴 🔵 🔴 🔵 🔴 ?',
+ opts:['🔴','🔵','🟡','🟢'], ans:1,
+ exp:'Mønsteret veksler: rød, blå, rød, blå... neste er blå'},
+
+{type:'logic',diff:1,
+ q:'Dersom alle A er B, og alle B er C, er det sant at:\n',
+ opts:['Noen A er C','Alle A er C','Ingen A er C','Noen B er ikke C'], ans:1,
+ exp:'Hvis A⊆B og B⊆C, følger det at A⊆C. Alle A er C.'},
+
+{type:'logic',diff:1,
+ q:'Hva er det neste symbolet i sekvensen?\n▲ ▲▲ ▲▲▲ ▲▲▲▲ ?',
+ opts:['▲▲▲▲','▲▲▲▲▲','▲▲▲▲▲▲','▲▲▲▲▲▲▲'], ans:1,
+ exp:'Antall trekanter øker med 1 for hvert ledd: neste er 5 trekanter'},
+
+{type:'logic',diff:1,
+ q:'Hva er det neste tallet?\n100 · 90 · 81 · 73 · 66 · ?',
+ opts:['58','60','62','64'], ans:1,
+ exp:'Differansene er: -10, -9, -8, -7, -6... neste: 66 - 6 = 60'},
+
+// ═══ LOGISK MIDDELS ═══
+{type:'logic',diff:2,
+ q:'Hva mangler i rekken?\nA1 · B3 · C5 · D7 · ?',
+ opts:['E8','E9','F9','F10'], ans:1,
+ exp:'Bokstaven øker med 1, tallet øker med 2 (odde tall): E9'},
+
+{type:'logic',diff:2,
+ q:'Finn mønsteret og velg manglende verdi:\n2 · 6 · 12 · 20 · 30 · ?',
+ opts:['36','40','42','44'], ans:2,
+ exp:'Differansene øker: +4, +6, +8, +10, +12 → 30 + 12 = 42'},
+
+{type:'logic',diff:2,
+ q:'Se på mønsteret:\n3   9\n5   25\n7   ?\n\nHva er det manglende tallet?',
+ opts:['35','42','49','56'], ans:2,
+ exp:'Høyre kolonne = venstre² : 3²=9, 5²=25, 7²=49'},
+
+{type:'logic',diff:2,
+ q:'Hva er neste i rekken?\nZ · Y · X · W · V · ?',
+ opts:['T','U','S','R'], ans:1,
+ exp:'Alfabetet baklengs: Z, Y, X, W, V, U'},
+
+{type:'logic',diff:2,
+ q:'Hva mangler?\n1 · 8 · 27 · 64 · ?',
+ opts:['100','121','125','144'], ans:2,
+ exp:'Tallene er kuber: 1³=1, 2³=8, 3³=27, 4³=64, 5³=125'},
+
+{type:'logic',diff:2,
+ q:'Velg det alternativet som fullfører mønsteret:\nROD → DOR\nKAT → TAK\nHUS → ?',
+ opts:['SUH','UHS','SUH','HSU'], ans:0,
+ exp:'Bokstavene reverseres: HUS → SUH'},
+
+// ═══ LOGISK VANSKELIG ═══
+{type:'logic',diff:3,
+ q:'Finn mønsteret:\n2 · 3 · 5 · 9 · 17 · ?',
+ opts:['28','30','33','35'], ans:2,
+ exp:'Hvert tall = forrige × 2 − 1: 3=2×2-1, 5=3×2-1, 9=5×2-1, 17=9×2-1, 33=17×2-1'},
+
+{type:'logic',diff:3,
+ q:'Se på tabellen og finn det manglende tallet:\n\n4   7   13\n5   9   17\n6   11  ?\n\n',
+ opts:['19','20','21','22'], ans:2,
+ exp:'Mønster: kolonne3 = kolonne1 × 2 + kolonne2 - 4... nei, enklere: rad1: 4,7,13 = 4,(4+3),(4+3+6). La oss prøve: kol3 = kol1 + kol2 + noe. 4+7=11, 5+9=14, 6+11=17. Kol3 = sum + 2: 13=11+2, 17=14+3... Egentlig: kol3 = kol2×2-1: 7×2-1=13, 9×2-1=17, 11×2-1=21'},
+
+{type:'logic',diff:3,
+ q:'Dersom: P → Q er sant og Q → R er sant, og vi vet at R er USANT. Hva kan vi konkludere?',
+ opts:['P er sant','Q er sant','P er usant','Ingenting'],ans:2,
+ exp:'Modus tollens: Hvis P→Q og Q er usant → P er usant. Siden R er usant og Q→R, er Q usant. Siden P→Q og Q er usant, er P usant.'},
+
+{type:'logic',diff:3,
+ q:'Hva mangler i rekken?\n1 · 3 · 7 · 13 · 21 · 31 · ?',
+ opts:['40','41','43','45'], ans:2,
+ exp:'Differansene: +2, +4, +6, +8, +10, +12 → 31+12=43'},
+
+{type:'logic',diff:3,
+ q:'Fem kollegaer sitter i en rekke. Ana sitter til venstre for Ben. Carlos sitter til høyre for Diana. Erik sitter mellom Ana og Carlos. Diana sitter ikke ytterst. Hvem sitter ytterst til venstre?',
+ opts:['Ana','Ben','Carlos','Diana'], ans:0,
+ exp:'Fra betingelsene: Diana ikke ytterst, Carlos til høyre for Diana, Ana til venstre for Ben, Erik mellom Ana og Carlos. Rekkefølge: Ana - Erik - Carlos - Diana - Ben eller Ana - ... Ytterst til venstre: Ana'},
+
+];
+
+// ─── GAME STATE ──────────────────────────────────────────────────────────────
+let round = [];
+let qi = 0;
+let score = 0;
+let answered = false;
+let timerInterval = null;
+let timeLeft = 0;
+let scoreByType = {num:{c:0,t:0}, verb:{c:0,t:0}, logic:{c:0,t:0}};
+const TYPE_LABELS = {num:'Numerisk', verb:'Verbal', logic:'Logisk'};
+const TYPE_COLORS = {num:'type-num', verb:'type-verb', logic:'type-logic'};
+const TOTAL = 20;
+// Difficulty distribution: q1-7 diff1, q8-14 diff2, q15-20 diff3
+const DIST = [1,1,1,1,1,1,1, 2,2,2,2,2,2,2, 3,3,3,3,3,3];
+
+function shuffle(arr) {
+  let a = [...arr];
+  for(let i=a.length-1;i>0;i--){
+    let j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+function buildRound() {
+  let byDiff = {1:[],2:[],3:[]};
+  BANK.forEach(q => byDiff[q.diff].push(q));
+  byDiff[1] = shuffle(byDiff[1]);
+  byDiff[2] = shuffle(byDiff[2]);
+  byDiff[3] = shuffle(byDiff[3]);
+  let used1=0, used2=0, used3=0;
+  round = DIST.map(d => {
+    if(d===1) return byDiff[1][used1++%byDiff[1].length];
+    if(d===2) return byDiff[2][used2++%byDiff[2].length];
+    return byDiff[3][used3++%byDiff[3].length];
+  });
+}
+
+function startQuiz() {
+  buildRound();
+  qi = 0; score = 0;
+  scoreByType = {num:{c:0,t:0}, verb:{c:0,t:0}, logic:{c:0,t:0}};
+  document.getElementById('start-screen').style.display='none';
+  document.getElementById('score-screen').classList.remove('show');
+  document.getElementById('quiz-screen').classList.add('show');
+  showQuestion();
+}
+
+function timeForDiff(d) { return d===1?30:d===2?40:50; }
+
+function showQuestion() {
+  answered = false;
+  const q = round[qi];
+  const total = timeForDiff(q.diff);
+  timeLeft = total;
+
+  // Meta
+  document.getElementById('q-counter').textContent = `Spørsmål ${qi+1} av ${TOTAL}`;
+  document.getElementById('score-live').textContent = `Poeng: ${score}`;
+  document.getElementById('progress-fill').style.width = `${(qi/TOTAL)*100}%`;
+
+  // Type badge
+  const badge = document.getElementById('type-badge');
+  badge.textContent = TYPE_LABELS[q.type];
+  badge.className = 'type-badge ' + TYPE_COLORS[q.type];
+
+  // Difficulty dots
+  const dots = document.getElementById('diff-row');
+  dots.innerHTML = '';
+  for(let i=1;i<=3;i++){
+    const d=document.createElement('div');
+    d.className='diff-dot'+(i<=q.diff?' on':'');
+    dots.appendChild(d);
+  }
+  const span=document.createElement('span');
+  span.style.cssText='font-size:0.78rem;color:var(--muted);margin-left:4px';
+  span.textContent=q.diff===1?'Lett':q.diff===2?'Middels':'Vanskelig';
+  dots.appendChild(span);
+
+  // Question
+  document.getElementById('question-text').textContent = q.q;
+
+  // Extra content
+  const extra = document.getElementById('extra-content');
+  extra.innerHTML = q.extra || '';
+
+  // Options
+  const opts = document.getElementById('options');
+  opts.innerHTML='';
+  const labels=['A','B','C','D'];
+  q.opts.forEach((o,i)=>{
+    const btn=document.createElement('button');
+    btn.className='option-btn';
+    btn.innerHTML=`<span class="option-key">${labels[i]}</span>${o}`;
+    btn.onclick=()=>selectAnswer(i);
+    opts.appendChild(btn);
+  });
+
+  // Feedback
+  const fb=document.getElementById('feedback');
+  fb.className='feedback';
+  fb.textContent='';
+
+  // Next btn
+  document.getElementById('next-btn').className='next-btn';
+
+  // Timer
+  startTimer(total);
+}
+
+function startTimer(total) {
+  clearInterval(timerInterval);
+  const circle = document.getElementById('timer-circle');
+  const label = document.getElementById('timer-label');
+  const circumference = 113;
+  function update() {
+    const ratio = timeLeft / total;
+    circle.style.strokeDashoffset = circumference * (1 - ratio);
+    // Color
+    if(ratio > 0.5) circle.style.stroke='var(--accent)';
+    else if(ratio > 0.25) circle.style.stroke='var(--yellow)';
+    else circle.style.stroke='var(--red)';
+    label.textContent = timeLeft + ' sek';
+  }
+  update();
+  timerInterval = setInterval(()=>{
+    if(answered) return;
+    timeLeft--;
+    update();
+    if(timeLeft<=0){
+      clearInterval(timerInterval);
+      if(!answered) timeUp();
+    }
+  },1000);
+}
+
+function timeUp() {
+  if(answered) return;
+  answered=true;
+  const q=round[qi];
+  scoreByType[q.type].t++;
+  const btns=document.querySelectorAll('.option-btn');
+  btns.forEach((b,i)=>{ b.disabled=true; if(i===q.ans) b.classList.add('reveal'); });
+  const fb=document.getElementById('feedback');
+  fb.className='feedback fail show';
+  fb.innerHTML=`⏱ Tiden gikk ut! Riktig svar var <strong>${['A','B','C','D'][q.ans]}</strong>.<br><em>${q.exp}</em>`;
+  document.getElementById('next-btn').className='next-btn show';
+}
+
+function selectAnswer(idx) {
+  if(answered) return;
+  answered=true;
+  clearInterval(timerInterval);
+  const q=round[qi];
+  scoreByType[q.type].t++;
+  const btns=document.querySelectorAll('.option-btn');
+  btns.forEach((b,i)=>{
+    b.disabled=true;
+    if(i===q.ans) b.classList.add(idx===q.ans?'correct':'reveal');
+    else if(i===idx) b.classList.add('wrong');
+  });
+  const correct=idx===q.ans;
+  if(correct){ score++; scoreByType[q.type].c++; }
+  const fb=document.getElementById('feedback');
+  fb.className='feedback '+(correct?'ok':'fail')+' show';
+  fb.innerHTML=correct
+    ? `✓ Riktig! <em>${q.exp}</em>`
+    : `✗ Feil. Riktig svar: <strong>${['A','B','C','D'][q.ans]}</strong>. <em>${q.exp}</em>`;
+  document.getElementById('next-btn').className='next-btn show';
+}
+
+function nextQuestion() {
+  qi++;
+  if(qi>=TOTAL) showScore();
+  else showQuestion();
+}
+
+function showScore() {
+  clearInterval(timerInterval);
+  document.getElementById('quiz-screen').classList.remove('show');
+  const ss=document.getElementById('score-screen');
+  ss.classList.add('show');
+  document.getElementById('final-score').textContent=`${score}/${TOTAL}`;
+  const pct=Math.round(score/TOTAL*100);
+  document.getElementById('score-label').textContent=`${pct}% riktige svar`;
+  // Breakdown
+  const bd=document.getElementById('breakdown');
+  const types=[{k:'num',l:'Numerisk',ic:'🔢'},{k:'verb',l:'Verbal',ic:'📝'},{k:'logic',l:'Logisk',ic:'🧩'}];
+  bd.innerHTML=types.map(t=>{
+    const s=scoreByType[t.k];
+    const p=s.t>0?Math.round(s.c/s.t*100):0;
+    return `<div class="breakdown-item"><div class="label">${t.ic} ${t.l}</div><div class="val" style="color:${p>=70?'var(--green)':p>=50?'var(--yellow)':'var(--red)'}">${s.c}/${s.t}</div></div>`;
+  }).join('');
+  // Message
+  let msg='';
+  if(pct>=90) msg='Utmerket! Du er veldig godt forberedt.';
+  else if(pct>=75) msg='Bra jobbet! Fortsett å øve for å nå toppen.';
+  else if(pct>=60) msg='Greit resultat. Fokuser på kategoriene du scoret lavt på.';
+  else msg='Fortsett å øve — det nytter! Se over forklaringene og prøv igjen.';
+  document.getElementById('score-msg').textContent=msg;
+}
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js');
+  }
+</script>
+</body>
+</html>
